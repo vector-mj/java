@@ -1,0 +1,50 @@
+trigger:
+  branches:
+    include:
+      - master
+variables:
+#   #############################
+#  /    Set Your Configuration   \
+#  ###############################
+
+  poolName: "WindowsAzureDevopsPool2"
+  agentName: "windowsAgent"
+
+#  ###############################
+
+stages:
+  - stage: 
+    pool:
+      name: $(poolName)
+      demands:
+        - agent.name -equals $(agentName)
+    jobs:
+      - job: "build"
+        steps:
+          - task: Gradle@2
+            inputs:
+              workingDirectory: ''
+              gradleWrapperFile: 'gradlew'
+              gradleOptions: '-Xmx3072m'
+              javaHomeOption: 'JDKVersion'
+              jdkDirectory: 'C:\Program Files\Java\jdk-17'
+              jdkArchitectureOption: 'x64'
+              publishJUnitResults: false
+              testResultsFiles: '**/TEST-*.xml'
+              tasks: 'assembleRelease'
+          - task: AndroidSigning@3
+            inputs:
+              apkFiles: '**/*.apk' 
+              apksign: true
+              apksignerKeystoreFile: 'my-release-key.keystore'
+              apksignerKeystorePassword: 'keystorepwd'
+              apksignerKeystoreAlias: 'key0'
+              apksignerKeyPassword: 'aliaspwd'
+              apksignerArguments: --out $(Build.SourcesDirectory)/app/build/outputs/apk/release/app.release.apk
+              zipalign: true
+          - task: CopyFiles@2
+            inputs:
+              SourceFolder: $(Build.SourcesDirectory)/app/build/outputs
+              contents: '**/*.release.apk' 
+              targetFolder: 'C:\Users\Administrator\Desktop\AndroidRelease'
+              overWrite: true
